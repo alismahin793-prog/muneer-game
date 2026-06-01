@@ -2,40 +2,62 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <title>منير قيم - Muneer Game v3</title>
-    <script>
-        // Force reload if page is cached
-        if(window.location.search.indexOf('nocache') === -1) {
-            window.location.href = window.location.href + (window.location.search ? '&' : '?') + 'nocache=' + Date.now();
-        }
-    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <title>منير قيم - نسخة الزلم</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap');
+
         * { margin: 0; padding: 0; box-sizing: border-box; overflow: hidden; }
         body {
             background: #000;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Tajawal', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             touch-action: none;
             user-select: none;
-            width: 100vw;
-            height: 100vh;
-            overflow: hidden;
-            margin: 0;
-            padding: 0;
+            -webkit-user-select: none;
         }
-        html {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-        }
-        #game-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; }
+        #game-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
         canvas { display: block; }
 
-        #ui {
+        /* ===== SPLASH SCREEN ===== */
+        #splash-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 1000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 0.8s ease-out;
+        }
+        #splash-text {
+            font-size: 48px; font-weight: 900; color: #00ff88;
+            text-shadow: 0 0 30px rgba(0,255,136,0.6), 0 0 60px rgba(0,255,136,0.3);
+            animation: splashPulse 1.5s ease-in-out infinite;
+            letter-spacing: 2px;
+        }
+        #splash-sub {
+            font-size: 18px; color: #666; margin-top: 15px;
+            animation: fadeInUp 1s ease-out 0.5s both;
+        }
+        @keyframes splashPulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.08); opacity: 0.9; }
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===== TOP CREDIT BAR ===== */
+        #top-credit {
+            position: fixed; top: 0; left: 0; width: 100%; height: 32px;
+            background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0,255,136,0.3);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px; font-weight: 700; color: #ffd700;
+            z-index: 50; letter-spacing: 1px;
+            text-shadow: 0 0 10px rgba(255,215,0,0.4);
+        }
+
+        /* ===== UI LAYER ===== */
+        #ui {
+            position: fixed; top: 32px; left: 0; width: 100%; height: calc(100% - 32px);
             pointer-events: none; z-index: 10;
         }
 
@@ -60,6 +82,7 @@
         .stat-pill.speed .value { color: #ff6b6b; }
         .stat-pill.dist .value { color: #00d4ff; }
         .stat-pill.high .value { color: #ffd700; }
+        .stat-pill.coins .value { color: #ffd700; }
 
         #combo-display { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
             font-size: 40px; font-weight: 900; color: #ffd700;
@@ -69,123 +92,152 @@
         #progress-container { position: absolute; bottom: 0; left: 0; width: 100%; height: 3px; background: rgba(255,255,255,0.05); }
         #progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #00ff88, #00d4ff); transition: width 0.3s; }
 
+        /* ===== CHARACTER SELECT PANEL ===== */
+        #characters-panel {
+            position: absolute; top: 50%; right: 15px; transform: translateY(-50%);
+            display: flex; flex-direction: column; gap: 8px;
+            z-index: 30; pointer-events: all;
+            max-height: 80vh; overflow-y: auto; padding: 5px;
+        }
+        .char-card {
+            width: 70px; height: 70px; border-radius: 16px;
+            background: rgba(0,0,0,0.7); backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.15);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.2s; position: relative;
+        }
+        .char-card:hover { transform: scale(1.08); border-color: rgba(255,255,255,0.4); }
+        .char-card.selected {
+            border-color: #00ff88; box-shadow: 0 0 20px rgba(0,255,136,0.4);
+            transform: scale(1.1);
+        }
+        .char-card.locked { opacity: 0.5; }
+        .char-card .char-ball {
+            width: 28px; height: 28px; border-radius: 50%;
+            box-shadow: 0 0 10px currentColor;
+            margin-bottom: 4px;
+        }
+        .char-card .char-name { font-size: 11px; font-weight: 700; color: #fff; }
+        .char-card .char-price {
+            position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+            background: #ffd700; color: #000; font-size: 10px; font-weight: 900;
+            padding: 2px 8px; border-radius: 10px; display: none;
+        }
+        .char-card.locked .char-price { display: block; }
+        .char-card .char-lock {
+            position: absolute; font-size: 20px; opacity: 0.8; display: none;
+        }
+        .char-card.locked .char-lock { display: block; }
+
+        /* ===== SHOP BUTTON ===== */
+        #shop-btn {
+            position: absolute; bottom: 20px; right: 15px;
+            background: rgba(0,0,0,0.7); backdrop-filter: blur(10px);
+            border: 2px solid #ffd700; border-radius: 50px;
+            padding: 12px 24px; color: #ffd700; font-size: 16px; font-weight: 900;
+            cursor: pointer; pointer-events: all; z-index: 30;
+            display: flex; align-items: center; gap: 8px;
+            transition: all 0.2s; box-shadow: 0 0 15px rgba(255,215,0,0.2);
+        }
+        #shop-btn:hover { transform: scale(1.05); box-shadow: 0 0 25px rgba(255,215,0,0.4); }
+        #shop-btn:active { transform: scale(0.95); }
+
+        /* ===== THEME SELECTOR ===== */
+        #theme-selector {
+            position: absolute; bottom: 20px; left: 15px;
+            display: flex; gap: 8px; pointer-events: all; z-index: 30;
+        }
+        .theme-btn {
+            width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3);
+            cursor: pointer; transition: all 0.2s; position: relative;
+        }
+        .theme-btn:hover { transform: scale(1.1); }
+        .theme-btn.active { border-color: #fff; box-shadow: 0 0 15px rgba(255,255,255,0.5); transform: scale(1.15); }
+        .theme-btn::after {
+            content: attr(data-name); position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%);
+            font-size: 9px; color: #fff; white-space: nowrap; opacity: 0.8;
+        }
+
+        /* ===== SCREENS ===== */
         .screen {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            position: absolute; top: 32px; left: 0; width: 100%; height: calc(100% - 32px);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             pointer-events: all; z-index: 20;
-            background: #0a0a1a;
-            overflow: hidden;
+            background: rgba(10,10,26,0.95);
         }
 
         #cover-wrapper {
             width: 180px; height: 180px; border-radius: 50%;
-            overflow: hidden; margin: 10px 0;
+            overflow: hidden; margin-bottom: 15px;
             border: 4px solid #00ff88;
             box-shadow: 0 0 40px rgba(0,255,136,0.3), 0 0 80px rgba(0,255,136,0.1);
             animation: float 3s ease-in-out infinite;
-            flex-shrink: 0;
         }
-        @media (min-width: 768px) {
-            #cover-wrapper { width: 220px; height: 220px; }
-        }
-
         @keyframes float {
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-15px); }
         }
-
         #cover-img { width: 100%; height: 100%; object-fit: cover; }
 
         .game-title {
-            font-size: 32px; font-weight: 900;
+            font-size: 38px; font-weight: 900;
             background: linear-gradient(90deg, #00ff88, #00d4ff);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            margin: 5px 0; letter-spacing: 2px;
-            flex-shrink: 0;
+            margin-bottom: 8px; letter-spacing: 2px;
         }
-        @media (min-width: 768px) {
-            .game-title { font-size: 42px; }
-        }
-        .game-subtitle { font-size: 13px; color: #888; margin: 0 0 10px 0; flex-shrink: 0; }
+        .game-subtitle { font-size: 14px; color: #888; margin-bottom: 20px; }
 
         #game-over-stats {
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            width: 90%;
-            max-width: 400px;
-            margin-bottom: 20px;
+            display: none; flex-direction: column; align-items: center;
+            width: 90%; max-width: 400px; margin-bottom: 15px;
         }
-
         #game-over-stats.show { display: flex; }
 
         .game-over-title {
-            font-size: 36px;
-            color: #ff6b6b;
-            font-weight: 900;
+            font-size: 32px; color: #ff6b6b; font-weight: 900;
             text-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            margin-bottom: 15px; display: flex; align-items: center; gap: 10px;
         }
 
         .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            width: 100%;
-            margin-bottom: 20px;
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+            width: 100%; margin-bottom: 15px;
         }
-
         .stat-card {
             background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            padding: 18px 15px;
-            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px;
+            padding: 15px 12px; text-align: center;
             transition: transform 0.2s, border-color 0.2s;
         }
-
-        .stat-card:hover {
-            transform: translateY(-3px);
-            border-color: rgba(255, 255, 255, 0.2);
-        }
-
-        .stat-card .stat-icon { font-size: 28px; margin-bottom: 8px; }
-        .stat-card .stat-label { font-size: 13px; color: #888; margin-bottom: 6px; }
-        .stat-card .stat-value { font-size: 28px; font-weight: 900; }
+        .stat-card:hover { transform: translateY(-3px); border-color: rgba(255, 255, 255, 0.2); }
+        .stat-card .stat-icon { font-size: 24px; margin-bottom: 6px; }
+        .stat-card .stat-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+        .stat-card .stat-value { font-size: 24px; font-weight: 900; }
         .stat-card.score .stat-value { color: #00ff88; text-shadow: 0 0 15px rgba(0,255,136,0.3); }
         .stat-card.high .stat-value { color: #ffd700; text-shadow: 0 0 15px rgba(255,215,0,0.3); }
         .stat-card.dist .stat-value { color: #00d4ff; text-shadow: 0 0 15px rgba(0,212,255,0.3); }
         .stat-card.speed .stat-value { color: #ff6b6b; text-shadow: 0 0 15px rgba(255,107,107,0.3); }
+        .stat-card.coins .stat-value { color: #ffd700; text-shadow: 0 0 15px rgba(255,215,0,0.3); }
 
         .new-record {
-            display: none;
-            background: linear-gradient(135deg, #ffd700, #ff8800);
-            color: #000;
-            font-size: 14px;
-            font-weight: 700;
-            padding: 8px 20px;
-            border-radius: 20px;
-            margin-bottom: 15px;
+            display: none; background: linear-gradient(135deg, #ffd700, #ff8800);
+            color: #000; font-size: 14px; font-weight: 700;
+            padding: 8px 20px; border-radius: 20px; margin-bottom: 12px;
             animation: pulse 1.5s infinite;
         }
-
         .new-record.show { display: block; }
-
         @keyframes pulse {
             0%, 100% { transform: scale(1); box-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
             50% { transform: scale(1.05); box-shadow: 0 0 25px rgba(255, 215, 0, 0.8); }
         }
 
         .btn-play {
-            padding: 16px 50px; font-size: 22px; font-weight: bold;
+            padding: 14px 45px; font-size: 20px; font-weight: bold;
             border: none; border-radius: 50px;
             background: linear-gradient(135deg, #00ff88, #00d4ff);
             color: #000; cursor: pointer; transition: all 0.2s;
-            margin-bottom: 15px; box-shadow: 0 4px 20px rgba(0,255,136,0.3);
-            width: 90%; max-width: 300px;
+            margin-bottom: 12px; box-shadow: 0 4px 20px rgba(0,255,136,0.3);
+            width: 90%; max-width: 280px; font-family: 'Tajawal', sans-serif;
         }
         .btn-play:hover { transform: scale(1.05); box-shadow: 0 0 30px rgba(0,255,136,0.5); }
         .btn-play:active { transform: scale(0.95); }
@@ -196,469 +248,108 @@
             border: 1px solid rgba(255,255,255,0.2); font-family: monospace; color: #fff; font-size: 12px;
         }
 
-        /* ===== MOBILE ARROW CONTROLS ===== */
+        /* ===== SHOP SCREEN ===== */
+        #shop-screen {
+            background: rgba(5,5,15,0.98);
+            display: none; flex-direction: column;
+        }
+        #shop-screen.show { display: flex; }
+        .shop-header {
+            font-size: 28px; font-weight: 900; color: #ffd700;
+            margin-bottom: 20px; display: flex; align-items: center; gap: 10px;
+            margin-top: 20px;
+        }
+        .shop-coins {
+            position: absolute; top: 20px; left: 20px;
+            background: rgba(255,215,0,0.15); border: 1px solid #ffd700;
+            border-radius: 50px; padding: 10px 20px;
+            font-size: 18px; font-weight: 900; color: #ffd700;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .shop-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px; width: 90%; max-width: 600px; overflow-y: auto; padding: 10px;
+        }
+        .shop-item {
+            background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 20px; padding: 20px; text-align: center;
+            transition: all 0.2s; cursor: pointer; position: relative;
+        }
+        .shop-item:hover { border-color: rgba(255,255,255,0.3); transform: translateY(-5px); }
+        .shop-item.owned { border-color: #00ff88; opacity: 0.7; }
+        .shop-item .shop-ball {
+            width: 50px; height: 50px; border-radius: 50%; margin: 0 auto 10px;
+            box-shadow: 0 0 20px currentColor;
+        }
+        .shop-item .shop-name { font-size: 16px; font-weight: 900; color: #fff; margin-bottom: 5px; }
+        .shop-item .shop-price {
+            font-size: 14px; color: #ffd700; font-weight: 700;
+            display: flex; align-items: center; justify-content: center; gap: 5px;
+        }
+        .shop-item .shop-owned {
+            font-size: 14px; color: #00ff88; font-weight: 700; display: none;
+        }
+        .shop-item.owned .shop-price { display: none; }
+        .shop-item.owned .shop-owned { display: block; }
+        .btn-close-shop {
+            margin-top: 20px; padding: 12px 40px; font-size: 16px; font-weight: 700;
+            border: 2px solid rgba(255,255,255,0.3); border-radius: 50px;
+            background: transparent; color: #fff; cursor: pointer; transition: all 0.2s;
+            font-family: 'Tajawal', sans-serif;
+        }
+        .btn-close-shop:hover { background: rgba(255,255,255,0.1); border-color: #fff; }
+
+        /* ===== MOBILE CONTROLS ===== */
         #mobile-controls { position: absolute; bottom: 25px; left: 0; width: 100%;
-            display: none; justify-content: space-between; padding: 0 25px; pointer-events: all; }
-        .mobile-btn { width: 70px; height: 70px; border-radius: 50%;
+            display: none; justify-content: space-between; padding: 0 25px; pointer-events: all; z-index: 25; }
+        .mobile-btn { width: 75px; height: 75px; border-radius: 50%;
             background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3);
-            color: #fff; font-size: 26px; display: flex; align-items: center; justify-content: center;
-            cursor: pointer; backdrop-filter: blur(5px); }
-        .mobile-btn:active { background: rgba(0,255,136,0.3); border-color: #00ff88; }
-
-        /* ===== DESKTOP A/D CONTROLS ===== */
-        #desktop-controls {
-            position: absolute;
-            bottom: 25px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: none;
-            gap: 15px;
-            pointer-events: all;
-            z-index: 15;
-        }
-        .desktop-btn {
-            width: 60px;
-            height: 60px;
-            border-radius: 12px;
-            background: rgba(0,0,0,0.5);
-            backdrop-filter: blur(8px);
-            border: 2px solid rgba(255,255,255,0.2);
-            color: #fff;
-            font-size: 22px;
-            font-weight: 900;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.15s;
-            user-select: none;
-        }
-        .desktop-btn:hover {
-            background: rgba(255,255,255,0.1);
-            border-color: #00ff88;
-            transform: scale(1.05);
-        }
-        .desktop-btn:active {
-            background: rgba(0,255,136,0.3);
-            border-color: #00ff88;
-            transform: scale(0.95);
-        }
-        .desktop-btn span {
-            font-size: 11px;
-            color: #888;
-            margin-top: 2px;
-        }
-
-        /* Show desktop controls on non-touch devices */
-        @media (hover: hover) and (pointer: fine) {
-            #desktop-controls { display: flex; }
-        }
-
-        /* Hide desktop controls on mobile */
-        @media (max-width: 768px), (hover: none) {
-            #desktop-controls { display: none !important; }
-        }
+            color: #fff; font-size: 28px; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; backdrop-filter: blur(5px); transition: all 0.1s; }
+        .mobile-btn:active { background: rgba(0,255,136,0.3); border-color: #00ff88; transform: scale(0.95); }
 
         .hidden { display: none !important; }
-    
-        /* ===== MUSIC BUTTON ===== */
-        #music-btn {
-            position: absolute;
-            top: 15px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 30;
-            background: rgba(0,0,0,0.6);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 50px;
-            padding: 10px 20px;
-            color: #fff;
-            font-size: 14px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.3s;
-            pointer-events: all;
-        }
-        #music-btn:hover {
-            background: rgba(255,255,255,0.1);
-            border-color: #00ff88;
-        }
-        #music-btn.muted { color: #ff6b6b; border-color: rgba(255,107,107,0.3); }
 
-        /* ===== FALLING TEXT ANIMATION ===== */
-        .falling-text-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 3;
-            overflow: hidden;
+        /* Screen shake animation */
+        @keyframes shake {
+            0%, 100% { transform: translate(0,0); }
+            10% { transform: translate(-5px, -5px); }
+            20% { transform: translate(5px, 5px); }
+            30% { transform: translate(-5px, 5px); }
+            40% { transform: translate(5px, -5px); }
+            50% { transform: translate(-3px, 3px); }
+            60% { transform: translate(3px, -3px); }
+            70% { transform: translate(-2px, 2px); }
+            80% { transform: translate(2px, -2px); }
+            90% { transform: translate(-1px, 1px); }
         }
-        .falling-text {
-            position: absolute;
-            font-size: 18px;
-            font-weight: 900;
-            color: #00ff88;
-            text-shadow: 0 0 10px rgba(0,255,136,0.4), 0 0 20px rgba(0,255,136,0.2);
-            white-space: nowrap;
-            animation: fallDown linear infinite;
-            opacity: 0.4;
-            pointer-events: none;
-        }
-        .falling-text:nth-child(1) { left: 5%; animation-duration: 4s; animation-delay: 0s; font-size: 16px; }
-        .falling-text:nth-child(2) { left: 20%; animation-duration: 5s; animation-delay: 1s; font-size: 20px; }
-        .falling-text:nth-child(3) { left: 35%; animation-duration: 4.5s; animation-delay: 0.5s; font-size: 18px; }
-        .falling-text:nth-child(4) { left: 50%; animation-duration: 6s; animation-delay: 2s; font-size: 22px; }
-        .falling-text:nth-child(5) { left: 65%; animation-duration: 4s; animation-delay: 1.5s; font-size: 15px; }
-        .falling-text:nth-child(6) { left: 80%; animation-duration: 5.5s; animation-delay: 0.8s; font-size: 19px; }
-        .falling-text:nth-child(7) { left: 90%; animation-duration: 4.2s; animation-delay: 2.5s; font-size: 17px; }
-        @keyframes fallDown {
-            0% { top: -10%; opacity: 0; transform: rotate(-5deg); }
-            15% { opacity: 0.4; }
-            70% { opacity: 0.2; }
-            100% { top: 45%; opacity: 0; transform: rotate(5deg); }
-        }
-
-        /* ===== CHARACTERS SECTION ===== */
-        .characters-section {
-            position: absolute;
-            top: 55px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 25;
-            width: 98%;
-            max-width: 800px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 3px;
-            padding: 5px 0;
-        }
-        .characters-title {
-            font-size: 10px;
-            color: #888;
-            letter-spacing: 1px;
-            margin-bottom: 2px;
-            text-align: center;
-        }
-        .characters-grid {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 3px;
-        }
-        .character-btn {
-            background: rgba(0,0,0,0.6);
-            backdrop-filter: blur(5px);
-            border: 1px solid rgba(255,255,255,0.15);
-            border-radius: 12px;
-            padding: 2px 8px;
-            cursor: pointer;
-            transition: all 0.25s;
-            display: flex;
-            align-items: center;
-            gap: 3px;
-            font-size: 10px;
-            font-weight: 700;
-            pointer-events: all;
-        }
-        .character-btn:hover {
-            transform: scale(1.08);
-            border-color: rgba(255,255,255,0.4);
-        }
-        .character-btn.active {
-            box-shadow: 0 0 8px currentColor;
-            border-width: 2px;
-        }
-        .char-nickname { font-weight: 900; font-size: 11px; }
-        .char-sep { opacity: 0.5; font-size: 8px; }
-        .char-real { font-weight: 500; font-size: 9px; opacity: 0.8; }
-
-        /* Mobile: characters even smaller */
-        @media (max-width: 600px) {
-            .characters-section { top: 50px; }
-            .character-btn { padding: 2px 6px; font-size: 9px; }
-            .char-nickname { font-size: 10px; }
-        }
-
-        /* Character Colors */
-        .char-aqout { color: #ff6b6b; border-color: rgba(255,107,107,0.4); }
-        .char-aqout.active { background: rgba(255,107,107,0.2); }
-        .char-emad { color: #00d4ff; border-color: rgba(0,212,255,0.4); }
-        .char-emad.active { background: rgba(0,212,255,0.2); }
-        .char-hatem { color: #ffd700; border-color: rgba(255,215,0,0.4); }
-        .char-hatem.active { background: rgba(255,215,0,0.2); }
-        .char-abd { color: #ff44aa; border-color: rgba(255,68,170,0.4); }
-        .char-abd.active { background: rgba(255,68,170,0.2); }
-        .char-hani { color: #44ff44; border-color: rgba(68,255,68,0.4); }
-        .char-hani.active { background: rgba(68,255,68,0.2); }
-        .char-sheikh { color: #ff8844; border-color: rgba(255,136,68,0.4); }
-        .char-sheikh.active { background: rgba(255,136,68,0.2); }
-        .char-homs { color: #aa44ff; border-color: rgba(170,68,255,0.4); }
-        .char-homs.active { background: rgba(170,68,255,0.2); }
-        .char-ajqa { color: #00ffaa; border-color: rgba(0,255,170,0.4); }
-        .char-ajqa.active { background: rgba(0,255,170,0.2); }
-        .char-muneer { color: #ffffff; border-color: rgba(255,255,255,0.5); text-shadow: 0 0 10px rgba(255,255,255,0.5); }
-        .char-muneer.active { background: rgba(255,255,255,0.15); box-shadow: 0 0 20px rgba(255,255,255,0.3); }
-
-        /* ===== CHARACTER NOTIFICATION ===== */
-        #char-notification {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(0);
-            z-index: 100;
-            background: rgba(0,0,0,0.9);
-            backdrop-filter: blur(15px);
-            border: 3px solid;
-            border-radius: 25px;
-            padding: 25px 40px;
-            text-align: center;
-            font-size: 20px;
-            font-weight: 900;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            pointer-events: none;
-            white-space: nowrap;
-            box-shadow: 0 0 40px rgba(0,0,0,0.5);
-        }
-        #char-notification.show {
-            transform: translate(-50%, -50%) scale(1);
-        }
-        #char-notification .char-msg { font-size: 15px; color: #aaa; margin-bottom: 8px; }
-        #char-notification .char-name { font-size: 24px; font-weight: 900; }
-
-        /* ===== SHARE BUTTON ===== */
-        #share-btn {
-            position: absolute;
-            bottom: 15px;
-            right: 15px;
-            z-index: 30;
-            background: rgba(0,0,0,0.6);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(0,212,255,0.3);
-            border-radius: 50px;
-            padding: 10px 18px;
-            color: #00d4ff;
-            font-size: 13px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: all 0.3s;
-            pointer-events: all;
-        }
-        #share-btn:hover {
-            background: rgba(0,212,255,0.15);
-            border-color: #00d4ff;
-            transform: scale(1.05);
-        }
-
-        /* ===== THEME VARIABLES ===== */
-        :root {
-            --theme-primary: #00ff88;
-            --theme-glow: rgba(0,255,136,0.5);
-            --theme-secondary: #00d4ff;
-        }
-
-    
-        /* ===== ANIMATED BACKGROUND THEMES ===== */
-
-        /* Theme 1: Animated Gradient Waves */
-        .screen {
-            background: linear-gradient(-45deg, #0a0a1a, #1a0a2e, #0a1a2e, #1a1a0a);
-            background-size: 400% 400%;
-            animation: gradientShift 15s ease infinite;
-            position: relative;
-            overflow: hidden;
-        }
-
-        @keyframes gradientShift {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        /* Theme 2: Cyber Grid Floor */
-        .screen::before {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: -50%;
-            width: 200%;
-            height: 60%;
-            background: 
-                linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px),
-                linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px);
-            background-size: 50px 50px;
-            transform: perspective(500px) rotateX(60deg);
-            transform-origin: bottom center;
-            animation: gridMove 8s linear infinite;
-            pointer-events: none;
-            z-index: 1;
-        }
-
-        @keyframes gridMove {
-            0% { transform: perspective(500px) rotateX(60deg) translateY(0); }
-            100% { transform: perspective(500px) rotateX(60deg) translateY(50px); }
-        }
-
-        /* Theme 3: Floating Orbs */
-        .bg-orbs {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 2;
-            overflow: hidden;
-        }
-
-        .orb {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(60px);
-            opacity: 0.4;
-            animation: orbFloat 20s ease-in-out infinite;
-        }
-
-        .orb:nth-child(1) {
-            width: 300px; height: 300px;
-            background: radial-gradient(circle, rgba(0,255,136,0.6), transparent 70%);
-            top: 10%; left: 10%;
-            animation-delay: 0s;
-        }
-        .orb:nth-child(2) {
-            width: 250px; height: 250px;
-            background: radial-gradient(circle, rgba(0,212,255,0.5), transparent 70%);
-            top: 60%; right: 10%;
-            animation-delay: -5s;
-            animation-duration: 25s;
-        }
-        .orb:nth-child(3) {
-            width: 200px; height: 200px;
-            background: radial-gradient(circle, rgba(255,107,107,0.4), transparent 70%);
-            bottom: 20%; left: 30%;
-            animation-delay: -10s;
-            animation-duration: 18s;
-        }
-        .orb:nth-child(4) {
-            width: 180px; height: 180px;
-            background: radial-gradient(circle, rgba(255,215,0,0.3), transparent 70%);
-            top: 30%; right: 25%;
-            animation-delay: -15s;
-            animation-duration: 22s;
-        }
-
-        @keyframes orbFloat {
-            0%, 100% { transform: translate(0, 0) scale(1); }
-            25% { transform: translate(30px, -30px) scale(1.1); }
-            50% { transform: translate(-20px, 20px) scale(0.9); }
-            75% { transform: translate(20px, 10px) scale(1.05); }
-        }
-
-        /* Theme 4: Shooting Stars */
-        .shooting-stars {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 2;
-        }
-
-        .shooting-star {
-            position: absolute;
-            width: 100px;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
-            animation: shoot 3s linear infinite;
-            opacity: 0;
-        }
-
-        .shooting-star:nth-child(1) { top: 10%; left: -100px; animation-delay: 0s; }
-        .shooting-star:nth-child(2) { top: 30%; left: -100px; animation-delay: 1.5s; }
-        .shooting-star:nth-child(3) { top: 50%; left: -100px; animation-delay: 3s; }
-        .shooting-star:nth-child(4) { top: 70%; left: -100px; animation-delay: 0.8s; }
-        .shooting-star:nth-child(5) { top: 20%; left: -100px; animation-delay: 2.2s; }
-
-        @keyframes shoot {
-            0% { transform: translateX(0) rotate(-45deg); opacity: 0; }
-            10% { opacity: 1; }
-            90% { opacity: 1; }
-            100% { transform: translateX(calc(100vw + 200px)) rotate(-45deg); opacity: 0; }
-        }
-
-        /* Theme 5: Neon Pulse Ring behind cover */
-        .neon-ring {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 280px;
-            height: 280px;
-            border-radius: 50%;
-            border: 2px solid rgba(0,255,136,0.2);
-            box-shadow: 0 0 50px rgba(0,255,136,0.1), inset 0 0 50px rgba(0,255,136,0.05);
-            animation: neonPulse 3s ease-in-out infinite;
-            pointer-events: none;
-            z-index: 1;
-        }
-
-        .neon-ring::before {
-            content: '';
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            width: 320px; height: 320px;
-            border-radius: 50%;
-            border: 1px solid rgba(0,212,255,0.1);
-            animation: neonPulse 3s ease-in-out infinite reverse;
-        }
-
-        @keyframes neonPulse {
-            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
-            50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.8; }
-        }
-
-        /* Ensure content is above background effects */
-        #cover-wrapper,
-        .game-title,
-        .game-subtitle,
-        #game-over-stats,
-        .btn-play,
-        .controls-info,
-        .characters-section,
-        .falling-text-container {
-            z-index: 10;
-            position: relative;
-        }
-
-        /* Enhanced cover wrapper glow */
-        #cover-wrapper {
-            z-index: 11;
-        }
-
+        .shake { animation: shake 0.4s ease-in-out; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <base target="_blank">
 </head>
 <body>
+    <!-- SPLASH SCREEN -->
+    <div id="splash-screen">
+        <div id="splash-text">هاي للزلم وبس</div>
+        <div id="splash-sub">منير قيم - النسخة الخاصة</div>
+    </div>
+
+    <!-- TOP CREDIT -->
+    <div id="top-credit">⚡ هذه النسخة الخاصة بالزلم من إنشاء منير ⚡</div>
+
     <div id="game-container"></div>
 
     <div id="ui">
-        <button id="music-btn" onclick="toggleMusic()">🎵 تشغيل الموسيقى</button>
         <div id="score-board">
             <div id="score-label">🏆 النقاط</div>
             <div id="score-value">0</div>
         </div>
         <div id="stats-bar">
+            <div class="stat-pill coins">
+                <span class="icon">🪙</span>
+                <div><div class="label">العملات</div><div class="value" id="coins-stat">1000</div></div>
+            </div>
             <div class="stat-pill speed">
                 <span class="icon">⚡</span>
                 <div><div class="label">السرعة</div><div class="value" id="speed-stat">1.0x</div></div>
@@ -674,52 +365,29 @@
         </div>
         <div id="combo-display">🔥 x2</div>
         <div id="progress-container"><div id="progress-bar"></div></div>
-        <!-- Desktop A/D Controls -->
-        <div id="desktop-controls">
-            <div class="desktop-btn" id="btn-a">A</div>
-            <div class="desktop-btn" id="btn-d">D</div>
-        </div>
-
-        <!-- Mobile Arrow Controls -->
         <div id="mobile-controls">
             <div class="mobile-btn" id="btn-left">◀</div>
             <div class="mobile-btn" id="btn-right">▶</div>
         </div>
     </div>
 
+    <!-- MAIN SCREEN -->
     <div id="main-screen" class="screen">
-        <!-- Background Effects -->
-        <div class="neon-ring"></div>
-        <div class="bg-orbs">
-            <div class="orb"></div>
-            <div class="orb"></div>
-            <div class="orb"></div>
-            <div class="orb"></div>
-        </div>
-        <div class="shooting-stars">
-            <div class="shooting-star"></div>
-            <div class="shooting-star"></div>
-            <div class="shooting-star"></div>
-            <div class="shooting-star"></div>
-            <div class="shooting-star"></div>
-        </div>
+        <!-- Characters Panel -->
+        <div id="characters-panel"></div>
 
-        <!-- Falling Text Animation -->
-        <div class="falling-text-container">
-            <div class="falling-text">هاي للزلم وبس</div>
-            <div class="falling-text">هاي للزلم وبس</div>
-            <div class="falling-text">هاي للزلم وبس</div>
-            <div class="falling-text">هاي للزلم وبس</div>
-            <div class="falling-text">هاي للزلم وبس</div>
-            <div class="falling-text">هاي للزلم وبس</div>
-            <div class="falling-text">هاي للزلم وبس</div>
-        </div>
+        <!-- Shop Button -->
+        <div id="shop-btn" onclick="openShop()">🛒 المتجر</div>
+
+        <!-- Theme Selector -->
+        <div id="theme-selector"></div>
+
         <div id="cover-wrapper">
-            <img id="cover-img" src="cover.jpg" alt="Muneer">
+            <img id="cover-img" src="cover.jpg" alt="Muneer" onerror="this.style.display='none'">
         </div>
 
-        <h1 id="main-title" class="game-title">منير قيم</h1>
-        <p id="main-subtitle" class="game-subtitle">لعبة الكرة الفضائية</p>
+        <h1 class="game-title">منير قيم</h1>
+        <p class="game-subtitle">لعبة الكرة الفضائية - نسخة الزلم</p>
 
         <div id="game-over-stats">
             <div class="game-over-title">☠️ انتهت اللعبة</div>
@@ -745,304 +413,256 @@
                     <div class="stat-label">السرعة القصوى</div>
                     <div class="stat-value" id="final-speed">0</div>
                 </div>
+                <div class="stat-card coins">
+                    <div class="stat-icon">🪙</div>
+                    <div class="stat-label">العملات المكتسبة</div>
+                    <div class="stat-value" id="final-coins">0</div>
+                </div>
             </div>
         </div>
 
         <button class="btn-play" id="play-btn" onclick="startGame()">▶ العب الآن</button>
 
-        
-        <!-- Characters Selection -->
-        <div class="characters-section">
-            <div class="characters-title">المصمم منير (علي) | اختر شخصيتك</div>
-            <div class="characters-grid">
-                <div class="character-btn char-aqout" onclick="selectCharacter('aqout', 'عقوت', 'بشار', '#ff6b6b')">
-                    <span class="char-nickname">عقوت</span>
-                    <span class="char-sep">⚡</span>
-                    <span class="char-real">بشار</span>
-                </div>
-                <div class="character-btn char-emad" onclick="selectCharacter('emad', 'عماد', 'البلدية', '#00d4ff')">
-                    <span class="char-nickname">عماد</span>
-                    <span class="char-sep">⚡</span>
-                    <span class="char-real">البلدية</span>
-                </div>
-                <div class="character-btn char-hatem" onclick="selectCharacter('hatem', 'حاتم', 'صفوان', '#ffd700')">
-                    <span class="char-nickname">حاتم</span>
-                    <span class="char-sep">⚡</span>
-                    <span class="char-real">صفوان</span>
-                </div>
-                <div class="character-btn char-abd" onclick="selectCharacter('abd', 'عبد بطاطا', 'احمد', '#ff44aa')">
-                    <span class="char-nickname">عبد بطاطا</span>
-                    <span class="char-sep">⚡</span>
-                    <span class="char-real">احمد</span>
-                </div>
-                <div class="character-btn char-hani" onclick="selectCharacter('hani', 'هاني', 'عربي', '#44ff44')">
-                    <span class="char-nickname">هاني</span>
-                    <span class="char-sep">⚡</span>
-                    <span class="char-real">عربي</span>
-                </div>
-                <div class="character-btn char-sheikh" onclick="selectCharacter('sheikh', 'شيخ الشباب', 'عيسى', '#ff8844')">
-                    <span class="char-nickname">شيخ الشباب</span>
-                    <span class="char-sep">⚡</span>
-                    <span class="char-real">عيسى</span>
-                </div>
-                <div class="character-btn char-homs" onclick="selectCharacter('homs', 'حمص', 'محمد', '#aa44ff')">
-                    <span class="char-nickname">حمص</span>
-                    <span class="char-sep">⚡</span>
-                    <span class="char-real">محمد</span>
-                </div>
-                <div class="character-btn char-ajqa" onclick="selectCharacter('ajqa', 'العجقة', 'عبيدة', '#00ffaa')">
-                    <span class="char-nickname">العجقة</span>
-                    <span class="char-sep">⚡</span>
-                    <span class="char-real">عبيدة</span>
-                </div>
-                <div class="character-btn char-muneer" onclick="selectCharacter('muneer', 'منير', 'علي', '#ffffff')">
-                    <span class="char-nickname">منير</span>
-                    <span class="char-sep">⚡</span>
-                    <span class="char-real">علي</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Share Button -->
-        <button id="share-btn" onclick="shareGame()">🔗 مشاركة</button>
-
         <div class="controls-info" id="controls-info">
-            <kbd>A</kbd> <kbd>D</kbd> أو <kbd>←</kbd> <kbd>→</kbd> للتحكم<br>
-            تجنب العقبات الحمراء!
+            <kbd>←</kbd> <kbd>→</kbd> أو <kbd>A</kbd> <kbd>D</kbd> للتحكم<br>
+            تجنب العقبات الحمراء! اجمع الماسات الزرقاء!
         </div>
     </div>
 
+    <!-- SHOP SCREEN -->
+    <div id="shop-screen" class="screen">
+        <div class="shop-coins">🪙 <span id="shop-coins-value">1000</span></div>
+        <div class="shop-header">🛒 متجر الزلم</div>
+        <div class="shop-grid" id="shop-grid"></div>
+        <button class="btn-close-shop" onclick="closeShop()">✕ إغلاق</button>
+    </div>
+
     <script>
-        let scene, camera, renderer, ball;
+        // ==========================================
+        // CHARACTERS DATA
+        // ==========================================
+        const CHARACTERS = [
+            { id: 'muneer', name: 'منير', color: 0xBF00FF, emissive: 0x8000CC, price: 0, glow: '#BF00FF' },
+            { id: 'bashar', name: 'بشار', color: 0x4169E1, emissive: 0x2040A0, price: 0, glow: '#4169E1' },
+            { id: 'omar', name: 'عمر', color: 0xFF4500, emissive: 0xCC3300, price: 300, glow: '#FF4500' },
+            { id: 'arabi', name: 'عربي', color: 0x50C878, emissive: 0x30A050, price: 300, glow: '#50C878' },
+            { id: 'safwan', name: 'صفوان', color: 0xFFD700, emissive: 0xCCAA00, price: 500, glow: '#FFD700' },
+            { id: 'eisa', name: 'عيسى', color: 0xFF8C00, emissive: 0xCC7000, price: 400, glow: '#FF8C00' },
+            { id: 'obaida', name: 'عبيدة', color: 0x00CED1, emissive: 0x00A0A0, price: 350, glow: '#00CED1' },
+            { id: 'homus', name: 'حمص', color: 0xFF1493, emissive: 0xCC1070, price: 450, glow: '#FF1493' },
+            { id: 'barghi', name: 'برغي', color: 0xC0C0C0, emissive: 0x808080, price: 600, glow: '#C0C0C0' }
+        ];
+
+        // ==========================================
+        // THEMES DATA
+        // ==========================================
+        const THEMES = [
+            { id: 'space', name: 'الفضاء', bg: 0x050510, fog: 0x050510, track: 0x0a0a1a, edge: 0x00ff88, obstacle: 0xff4444, powerup: 0x00d4ff, light1: 0x00ff88, light2: 0xff3366 },
+            { id: 'desert', name: 'الصحراء', bg: 0x1a0f00, fog: 0x1a0f00, track: 0x2a1a0a, edge: 0xff8800, obstacle: 0xff2200, powerup: 0xffdd00, light1: 0xff8800, light2: 0xff4400 },
+            { id: 'ice', name: 'الجليد', bg: 0x001020, fog: 0x001020, track: 0x0a1a2a, edge: 0x00ffff, obstacle: 0xff0066, powerup: 0x00ffcc, light1: 0x00ffff, light2: 0xff00aa },
+            { id: 'neon', name: 'النيون', bg: 0x100010, fog: 0x100010, track: 0x1a001a, edge: 0xff00ff, obstacle: 0xff0044, powerup: 0x00ff00, light1: 0xff00ff, light2: 0x00ffff }
+        ];
+
+        let currentTheme = 0;
+        let currentCharIndex = 0;
+        let coins = parseInt(localStorage.getItem('muneerCoins')) || 1000;
+        let ownedChars = JSON.parse(localStorage.getItem('muneerOwnedChars')) || ['muneer', 'bashar'];
+
+        // ==========================================
+        // THREE.JS CORE
+        // ==========================================
+        let scene, camera, renderer, ball, ballGlow, ballTrail = [];
         let trackSegments = [], obstacles = [], particles = [], powerups = [];
-        let isGameRunning = false;
-        let score = 0, highScore = localStorage.getItem('muneerHighScore') || 0;
-        let speed = 0.35, baseSpeed = 0.35, maxSpeedReached = 0;
+        let isGameRunning = false, isGameOver = false;
+        let score = 0, highScore = parseInt(localStorage.getItem('muneerHighScore')) || 0;
+        let speed = 0.5, baseSpeed = 0.5, maxSpeedReached = 0;
         let ballVelocity = { x: 0 };
         let ballPosition = { x: 0, z: 0 };
         let keys = { left: false, right: false };
-        let frameCount = 0, totalDistance = 0;
+        let frameCount = 0, totalDistance = 0, sessionCoins = 0;
         let scorePopTimeout = null, comboCount = 0, comboTimer = null;
-        let isGameOver = false;
-
-        // ===== SAFETY ZONE =====
-        const SAFETY_ZONE_LENGTH = 120; // 120 meters safe zone
-
-        // ===== DIFFICULTY PROGRESSION =====
-        // These increase over time
-        let currentObstacleCount = 1;    // Start with 1 obstacle per segment
-        let currentObstacleSpacing = 35; // Start with 35 units between obstacles
-        let currentSpeedMultiplier = 1.0;
-
+        let screenShake = 0;
+        const SAFETY_ZONE_LENGTH = 100;
         const TRACK_WIDTH = 12, SEGMENT_LENGTH = 20, SEGMENTS_VISIBLE = 12, TRACK_HALF = TRACK_WIDTH / 2;
-        const COLOR_BALL = 0x00ff88, COLOR_TRACK = 0x0a0a1a, COLOR_EDGE = 0x00ff88;
-        const COLOR_OBSTACLE = 0xff4444, COLOR_POWERUP = 0x00d4ff;
 
-        
-        // ===== MUSIC SYSTEM =====
-        let musicAudio = null;
-        let isMusicPlaying = false;
-        let musicUrl = ''; // رابط MP3 مباشر - اتركه فارغاً إذا استخدمت YouTube
-        let youtubePlayer = null;
-        let youtubeIframe = null;
-        const YOUTUBE_VIDEO_ID = 'm-tto8VDRDI'; // معرف فيديو YouTube
-
-        function toggleMusic() {
-            const btn = document.getElementById('music-btn');
-
-            // Try direct audio URL first
-            if (musicUrl) {
-                if (!musicAudio) {
-                    musicAudio = new Audio(musicUrl);
-                    musicAudio.loop = true;
-                    musicAudio.volume = 0.5;
-                }
-                if (isMusicPlaying) {
-                    musicAudio.pause();
-                    isMusicPlaying = false;
-                    btn.innerHTML = '🎵 تشغيل الموسيقى';
-                    btn.classList.add('muted');
-                } else {
-                    musicAudio.play().catch(e => console.log('Audio play failed:', e));
-                    isMusicPlaying = true;
-                    btn.innerHTML = '🔊 كتم الموسيقى';
-                    btn.classList.remove('muted');
-                }
-                return;
-            }
-
-            // Fallback: YouTube iframe player (hidden)
-            if (!youtubeIframe) {
-                youtubeIframe = document.createElement('div');
-                youtubeIframe.id = 'yt-player-container';
-                youtubeIframe.style.cssText = 'position:absolute;top:-9999px;left:-9999px;width:1px;height:1px;overflow:hidden;';
-                youtubeIframe.innerHTML = '<iframe id="yt-iframe" width="1" height="1" src="https://www.youtube.com/embed/' + YOUTUBE_VIDEO_ID + '?enablejsapi=1&autoplay=0&loop=1&playlist=' + YOUTUBE_VIDEO_ID + '" frameborder="0" allow="autoplay"></iframe>';
-                document.body.appendChild(youtubeIframe);
-
-                // Load YouTube API
-                if (!window.YT) {
-                    const tag = document.createElement('script');
-                    tag.src = 'https://www.youtube.com/iframe_api';
-                    document.body.appendChild(tag);
-                }
-
-                window.onYouTubeIframeAPIReady = function() {
-                    youtubePlayer = new YT.Player('yt-iframe', {
-                        events: {
-                            'onReady': function(event) {
-                                if (isMusicPlaying) event.target.playVideo();
-                            }
-                        }
-                    });
-                };
-
-                btn.innerHTML = '⏳ جاري التحميل...';
-                setTimeout(() => {
-                    btn.innerHTML = isMusicPlaying ? '🔊 كتم الموسيقى' : '🎵 تشغيل الموسيقى';
-                }, 2000);
-                return;
-            }
-
-            if (youtubePlayer && youtubePlayer.playVideo) {
-                if (isMusicPlaying) {
-                    youtubePlayer.pauseVideo();
-                    isMusicPlaying = false;
-                    btn.innerHTML = '🎵 تشغيل الموسيقى';
-                    btn.classList.add('muted');
-                } else {
-                    youtubePlayer.playVideo();
-                    youtubePlayer.setVolume(50);
-                    isMusicPlaying = true;
-                    btn.innerHTML = '🔊 كتم الموسيقى';
-                    btn.classList.remove('muted');
-                }
-            }
-        }
-
-        function setMusicUrl(url) {
-            musicUrl = url;
-            if (musicAudio) {
-                musicAudio.src = url;
-                musicAudio.load();
-            }
-            document.getElementById('music-btn').innerHTML = '🎵 تشغيل الموسيقى';
-        }
-
-        // ===== CHARACTER SYSTEM =====
-        let currentCharacter = { id: '', nickname: '', real: '', color: '#00ff88' };
-
-        const characterThemes = {
-            'aqout':   { color: '#ff6b6b', glow: 'rgba(255,107,107,0.5)', name: 'عقوت', real: 'بشار' },
-            'emad':    { color: '#00d4ff', glow: 'rgba(0,212,255,0.5)', name: 'عماد', real: 'البلدية' },
-            'hatem':   { color: '#ffd700', glow: 'rgba(255,215,0,0.5)', name: 'حاتم', real: 'صفوان' },
-            'abd':     { color: '#ff44aa', glow: 'rgba(255,68,170,0.5)', name: 'عبد بطاطا', real: 'احمد' },
-            'hani':    { color: '#44ff44', glow: 'rgba(68,255,68,0.5)', name: 'هاني', real: 'عربي' },
-            'sheikh':  { color: '#ff8844', glow: 'rgba(255,136,68,0.5)', name: 'شيخ الشباب', real: 'عيسى' },
-            'homs':    { color: '#aa44ff', glow: 'rgba(170,68,255,0.5)', name: 'حمص', real: 'محمد' },
-            'ajqa':    { color: '#00ffaa', glow: 'rgba(0,255,170,0.5)', name: 'العجقة', real: 'عبيدة' },
-            'muneer':  { color: '#ffffff', glow: 'rgba(255,255,255,0.5)', name: 'منير', real: 'علي' }
-        };
-
-        function selectCharacter(id, nickname, real, color) {
-            currentCharacter = { id, nickname, real, color };
-            const theme = characterThemes[id];
-
-            // Update active button state
-            document.querySelectorAll('.character-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelector('.char-' + id).classList.add('active');
-
-            // Show notification
-            const notif = document.getElementById('char-notification');
-            const nameDisplay = document.getElementById('char-name-display');
-            nameDisplay.textContent = nickname + ' (' + real + ')';
-            nameDisplay.style.color = color;
-            notif.style.borderColor = color;
-            notif.classList.add('show');
-            setTimeout(() => notif.classList.remove('show'), 2000);
-
-            // Apply theme to UI
-            applyTheme(theme.color, theme.glow);
-        }
-
-        function applyTheme(primaryColor, glowColor) {
-            const root = document.documentElement;
-            root.style.setProperty('--theme-primary', primaryColor);
-            root.style.setProperty('--theme-glow', glowColor);
-
-            // Update ball color in 3D scene
-            if (ball) {
-                ball.material.color.set(primaryColor);
-                ball.material.emissive.set(primaryColor);
-                ball.children[0].material.color.set(primaryColor);
-            }
-
-            // Update score color
-            document.getElementById('score-value').style.color = primaryColor;
-            document.getElementById('score-value').style.textShadow = '0 0 15px ' + glowColor;
-
-            // Update cover border
-            document.getElementById('cover-wrapper').style.borderColor = primaryColor;
-            document.getElementById('cover-wrapper').style.boxShadow = 
-                '0 0 40px ' + glowColor.replace('0.5', '0.3') + ', 0 0 80px ' + glowColor.replace('0.5', '0.1');
-
-            // Update game title gradient
-            document.querySelector('.game-title').style.background = 
-                'linear-gradient(90deg, ' + primaryColor + ', ' + primaryColor + '88)';
-
-            // Update progress bar
-            document.getElementById('progress-bar').style.background = 
-                'linear-gradient(90deg, ' + primaryColor + ', ' + primaryColor + 'aa)';
-
-            // Update play button
-            const playBtn = document.getElementById('play-btn');
-            playBtn.style.background = 'linear-gradient(135deg, ' + primaryColor + ', ' + primaryColor + 'aa)';
-            playBtn.style.boxShadow = '0 4px 20px ' + glowColor.replace('0.5', '0.3');
-        }
-
-        // ===== SHARE SYSTEM =====
-        // ⚠️ غيّر هذا الرابط بعد رفع اللعبة على GitHub Pages أو أي استضافة
-        const GAME_SHARE_URL = 'https://alismahin793-prog.github.io/muneer-game';
-
-        function shareGame() {
-            const shareData = {
-                title: 'منير قيم - Muneer Game',
-                text: '🎮 جرب لعبة منير قيم! لعبة الكرة الفضائية الممتعة مع شخصيات الشباب!',
-                url: GAME_SHARE_URL
-            };
-
-            if (navigator.share) {
-                navigator.share(shareData).catch(err => console.log('Share cancelled'));
-            } else {
-                // Fallback: copy to clipboard
-                navigator.clipboard.writeText(shareData.url).then(() => {
-                    const btn = document.getElementById('share-btn');
-                    const oldText = btn.innerHTML;
-                    btn.innerHTML = '✅ تم نسخ الرابط!';
-                    setTimeout(() => btn.innerHTML = oldText, 2000);
-                }).catch(() => {
-                    // Final fallback: select text
-                    const input = document.createElement('input');
-                    input.value = shareData.url;
-                    document.body.appendChild(input);
-                    input.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(input);
-                    const btn = document.getElementById('share-btn');
-                    btn.innerHTML = '✅ تم النسخ!';
-                    setTimeout(() => btn.innerHTML = '🔗 مشاركة', 2000);
-                });
-            }
-        }
-
+        // ==========================================
+        // INIT
+        // ==========================================
         function init() {
+            loadData();
+            buildUI();
+            initThree();
+            setupMobile();
+            setupSwipe();
+
+            // Splash screen
+            setTimeout(() => {
+                const splash = document.getElementById('splash-screen');
+                splash.style.opacity = '0';
+                setTimeout(() => splash.style.display = 'none', 800);
+            }, 2000);
+
+            window.addEventListener('resize', onResize);
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keyup', onKeyUp);
+            document.addEventListener('contextmenu', e => e.preventDefault());
+
+            animate();
+        }
+
+        function loadData() {
+            const saved = localStorage.getItem('muneerOwnedChars');
+            if (saved) ownedChars = JSON.parse(saved);
+            else {
+                ownedChars = ['muneer', 'bashar'];
+                localStorage.setItem('muneerOwnedChars', JSON.stringify(ownedChars));
+            }
+            coins = parseInt(localStorage.getItem('muneerCoins')) || 1000;
+            highScore = parseInt(localStorage.getItem('muneerHighScore')) || 0;
+            const savedTheme = localStorage.getItem('muneerTheme');
+            if (savedTheme) currentTheme = parseInt(savedTheme);
+            const savedChar = localStorage.getItem('muneerChar');
+            if (savedChar) {
+                const idx = CHARACTERS.findIndex(c => c.id === savedChar);
+                if (idx >= 0) currentCharIndex = idx;
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('muneerCoins', coins);
+            localStorage.setItem('muneerOwnedChars', JSON.stringify(ownedChars));
+            localStorage.setItem('muneerHighScore', highScore);
+            localStorage.setItem('muneerTheme', currentTheme);
+            localStorage.setItem('muneerChar', CHARACTERS[currentCharIndex].id);
+        }
+
+        // ==========================================
+        // UI BUILDERS
+        // ==========================================
+        function buildUI() {
+            // Characters panel
+            const panel = document.getElementById('characters-panel');
+            panel.innerHTML = '';
+            CHARACTERS.forEach((char, idx) => {
+                const isOwned = ownedChars.includes(char.id);
+                const isSelected = idx === currentCharIndex;
+                const card = document.createElement('div');
+                card.className = `char-card ${isSelected ? 'selected' : ''} ${!isOwned ? 'locked' : ''}`;
+                card.innerHTML = `
+                    <div class="char-price">${char.price}</div>
+                    <div class="char-lock">🔒</div>
+                    <div class="char-ball" style="background: ${char.glow}; color: ${char.glow}"></div>
+                    <div class="char-name">${char.name}</div>
+                `;
+                card.onclick = () => selectCharacter(idx);
+                panel.appendChild(card);
+            });
+
+            // Themes
+            const themeContainer = document.getElementById('theme-selector');
+            themeContainer.innerHTML = '';
+            THEMES.forEach((theme, idx) => {
+                const btn = document.createElement('div');
+                btn.className = `theme-btn ${idx === currentTheme ? 'active' : ''}`;
+                btn.style.background = '#' + theme.edge.toString(16).padStart(6, '0');
+                btn.setAttribute('data-name', theme.name);
+                btn.onclick = () => selectTheme(idx);
+                themeContainer.appendChild(btn);
+            });
+
+            // Shop
+            buildShop();
+            updateStatsUI();
+        }
+
+        function buildShop() {
+            const grid = document.getElementById('shop-grid');
+            grid.innerHTML = '';
+            document.getElementById('shop-coins-value').textContent = coins;
+
+            CHARACTERS.forEach(char => {
+                const isOwned = ownedChars.includes(char.id);
+                const item = document.createElement('div');
+                item.className = `shop-item ${isOwned ? 'owned' : ''}`;
+                item.innerHTML = `
+                    <div class="shop-ball" style="background: ${char.glow}"></div>
+                    <div class="shop-name">${char.name}</div>
+                    <div class="shop-price">🪙 ${char.price}</div>
+                    <div class="shop-owned">✓ مملوك</div>
+                `;
+                if (!isOwned) {
+                    item.onclick = () => buyCharacter(char.id);
+                }
+                grid.appendChild(item);
+            });
+        }
+
+        function selectCharacter(idx) {
+            const char = CHARACTERS[idx];
+            if (!ownedChars.includes(char.id)) {
+                alert('🔒 هذا الزلم مقفل! اشتريه من المتجر أولاً.');
+                return;
+            }
+            currentCharIndex = idx;
+            document.querySelectorAll('.char-card').forEach((c, i) => {
+                c.classList.toggle('selected', i === idx);
+            });
+            saveData();
+            if (ball) updateBallAppearance();
+        }
+
+        function selectTheme(idx) {
+            currentTheme = idx;
+            document.querySelectorAll('.theme-btn').forEach((b, i) => {
+                b.classList.toggle('active', i === idx);
+            });
+            saveData();
+            applyTheme();
+        }
+
+        function buyCharacter(id) {
+            const char = CHARACTERS.find(c => c.id === id);
+            if (!char || ownedChars.includes(id)) return;
+            if (coins < char.price) {
+                alert('🪙 ما معك عملات كفاية! العب أكثر تجمع عملات.');
+                return;
+            }
+            coins -= char.price;
+            ownedChars.push(id);
+            saveData();
+            buildShop();
+            buildUI();
+            updateStatsUI();
+
+            // Confetti effect
+            createExplosion(0, 5, 0, 0xffd700, 30);
+        }
+
+        function openShop() {
+            document.getElementById('shop-screen').classList.add('show');
+            buildShop();
+        }
+        function closeShop() {
+            document.getElementById('shop-screen').classList.remove('show');
+        }
+
+        function updateStatsUI() {
+            document.getElementById('coins-stat').textContent = coins;
+            document.getElementById('high-stat').textContent = highScore;
+            document.getElementById('shop-coins-value').textContent = coins;
+        }
+
+        // ==========================================
+        // THREE.JS INIT
+        // ==========================================
+        function initThree() {
             const container = document.getElementById('game-container');
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x050510);
-            scene.fog = new THREE.Fog(0x050510, 25, 80);
+            applyTheme();
 
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 200);
 
-            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.shadowMap.enabled = true;
@@ -1053,64 +673,100 @@
             dir.position.set(5, 10, 5); dir.castShadow = true;
             scene.add(dir);
 
-            scene.add(new THREE.PointLight(0x00ff88, 0.5, 30).position.set(-6, 3, 0));
-            scene.add(new THREE.PointLight(0xff3366, 0.4, 30).position.set(6, 3, 0));
-
             createBall();
             createStars();
+        }
 
-            window.addEventListener('resize', onResize);
-            document.addEventListener('keydown', onKeyDown);
-            document.addEventListener('keyup', onKeyUp);
-            setupMobile();
-            setupDesktop();
+        function applyTheme() {
+            const t = THEMES[currentTheme];
+            if (!scene) return;
+            scene.background = new THREE.Color(t.bg);
+            scene.fog = new THREE.Fog(t.fog, 25, 80);
 
-            document.getElementById('high-stat').textContent = highScore;
-            animate();
+            // Update lights if they exist
+            scene.children.forEach(child => {
+                if (child.isPointLight) {
+                    if (child.position.x < 0) child.color.setHex(t.light1);
+                    else child.color.setHex(t.light2);
+                }
+            });
         }
 
         function createBall() {
-            const geo = new THREE.SphereGeometry(0.7, 24, 24);
+            const char = CHARACTERS[currentCharIndex];
+            const geo = new THREE.SphereGeometry(0.7, 32, 32);
             const mat = new THREE.MeshPhongMaterial({
-                color: COLOR_BALL, emissive: COLOR_BALL, emissiveIntensity: 0.3, shininess: 100
+                color: char.color, emissive: char.emissive, emissiveIntensity: 0.4, shininess: 100
             });
+            if (ball) scene.remove(ball);
             ball = new THREE.Mesh(geo, mat);
             ball.position.set(0, 1.2, 0);
             ball.castShadow = true;
             scene.add(ball);
 
-            const glow = new THREE.Mesh(
-                new THREE.SphereGeometry(1, 8, 8),
-                new THREE.MeshBasicMaterial({ color: COLOR_BALL, transparent: true, opacity: 0.06 })
+            // Glow layers for bloom effect
+            ball.children.forEach(c => ball.remove(c));
+            const glow1 = new THREE.Mesh(
+                new THREE.SphereGeometry(1.0, 16, 16),
+                new THREE.MeshBasicMaterial({ color: char.color, transparent: true, opacity: 0.15 })
             );
-            ball.add(glow);
+            const glow2 = new THREE.Mesh(
+                new THREE.SphereGeometry(1.4, 16, 16),
+                new THREE.MeshBasicMaterial({ color: char.color, transparent: true, opacity: 0.06 })
+            );
+            const glow3 = new THREE.Mesh(
+                new THREE.SphereGeometry(2.0, 16, 16),
+                new THREE.MeshBasicMaterial({ color: char.color, transparent: true, opacity: 0.03 })
+            );
+            ball.add(glow1); ball.add(glow2); ball.add(glow3);
+            ballGlow = [glow1, glow2, glow3];
+
+            // Trail system
+            ballTrail.forEach(t => scene.remove(t.mesh));
+            ballTrail = [];
+        }
+
+        function updateBallAppearance() {
+            createBall();
         }
 
         function createStars() {
             const geo = new THREE.BufferGeometry();
-            const count = 1000;
+            const count = 1500;
             const pos = new Float32Array(count * 3);
+            const colors = new Float32Array(count * 3);
+            const t = THEMES[currentTheme];
             for (let i = 0; i < count * 3; i += 3) {
-                pos[i] = (Math.random() - 0.5) * 200;
-                pos[i+1] = Math.random() * 60 + 10;
-                pos[i+2] = (Math.random() - 0.5) * 200 - 50;
+                pos[i] = (Math.random() - 0.5) * 300;
+                pos[i+1] = Math.random() * 80 + 10;
+                pos[i+2] = (Math.random() - 0.5) * 300 - 50;
+                const c = new THREE.Color(t.edge);
+                c.offsetHSL(0, 0, (Math.random() - 0.5) * 0.3);
+                colors[i] = c.r; colors[i+1] = c.g; colors[i+2] = c.b;
             }
             geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-            scene.add(new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.3, transparent: true, opacity: 0.6 })));
+            geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            scene.add(new THREE.Points(geo, new THREE.PointsMaterial({ 
+                vertexColors: true, size: 0.4, transparent: true, opacity: 0.8 
+            })));
         }
 
+        // ==========================================
+        // TRACK & OBSTACLES
+        // ==========================================
         function spawnTrackSegment(zPos) {
+            const t = THEMES[currentTheme];
             const group = new THREE.Group();
             group.position.z = zPos;
 
             const floor = new THREE.Mesh(
                 new THREE.BoxGeometry(TRACK_WIDTH, 0.3, SEGMENT_LENGTH),
-                new THREE.MeshPhongMaterial({ color: COLOR_TRACK, shininess: 20 })
+                new THREE.MeshPhongMaterial({ color: t.track, shininess: 30 })
             );
             floor.position.y = -0.15; floor.receiveShadow = true;
             group.add(floor);
 
-            const edgeMat = new THREE.MeshBasicMaterial({ color: COLOR_EDGE });
+            const edgeMat = new THREE.MeshBasicMaterial({ color: t.edge });
             const left = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.6, SEGMENT_LENGTH), edgeMat);
             left.position.set(-TRACK_HALF + 0.1, 0.2, 0);
             group.add(left);
@@ -1119,79 +775,77 @@
             right.position.set(TRACK_HALF - 0.1, 0.2, 0);
             group.add(right);
 
+            // Grid lines with glow
             for (let i = -2; i <= 2; i++) {
                 const line = new THREE.Mesh(
                     new THREE.BoxGeometry(0.02, 0.01, SEGMENT_LENGTH - 1),
-                    new THREE.MeshBasicMaterial({ color: COLOR_EDGE, transparent: true, opacity: 0.1 })
+                    new THREE.MeshBasicMaterial({ color: t.edge, transparent: true, opacity: 0.15 })
                 );
                 line.position.set(i * 2.5, 0.01, 0);
                 group.add(line);
             }
 
+            // Moving neon strips on floor
+            const strip = new THREE.Mesh(
+                new THREE.BoxGeometry(TRACK_WIDTH - 0.5, 0.02, 0.3),
+                new THREE.MeshBasicMaterial({ color: t.edge, transparent: true, opacity: 0.3 })
+            );
+            strip.position.set(0, 0.01, (Math.random() - 0.5) * SEGMENT_LENGTH * 0.8);
+            group.add(strip);
+
             scene.add(group);
             trackSegments.push({ mesh: group, z: zPos });
 
-            // ===== SAFETY ZONE: No obstacles in first 120 units =====
             if (Math.abs(zPos) > SAFETY_ZONE_LENGTH) {
                 spawnObstacles(zPos);
-                if (Math.random() < 0.12) spawnPowerup(zPos);
+                if (Math.random() < 0.15) spawnPowerup(zPos);
+                if (Math.random() < 0.08) spawnCoin(zPos);
             }
         }
 
         function removeOldSegments() {
             for (let i = trackSegments.length - 1; i >= 0; i--) {
-                if (trackSegments[i].z > ballPosition.z + 25) {
+                if (trackSegments[i].z > ballPosition.z + 30) {
                     scene.remove(trackSegments[i].mesh);
                     trackSegments.splice(i, 1);
                 }
             }
         }
 
-        // ===== DIFFICULTY SCALING =====
-        function updateDifficulty() {
-            // Every 100 meters, increase difficulty
-            const difficultyLevel = Math.floor(totalDistance / 100);
-
-            // Speed increases slowly: 0.35 -> max 1.5
-            const targetSpeed = baseSpeed + (difficultyLevel * 0.08);
-            speed = Math.min(targetSpeed, 1.5);
-            currentSpeedMultiplier = speed / baseSpeed;
-
-            // Obstacle count increases: 1 -> max 3 per segment
-            currentObstacleCount = Math.min(1 + Math.floor(difficultyLevel / 2), 3);
-
-            // Obstacle spacing decreases: 35 -> min 15
-            currentObstacleSpacing = Math.max(35 - (difficultyLevel * 3), 15);
-        }
-
         function spawnObstacles(zPos) {
-            // Use current difficulty settings
-            for (let i = 0; i < currentObstacleCount; i++) {
-                // Space obstacles apart based on current difficulty
-                const z = zPos + (Math.random() - 0.5) * (SEGMENT_LENGTH - currentObstacleSpacing);
+            const t = THEMES[currentTheme];
+            const count = Math.floor(Math.random() * 2) + 1;
+            for (let i = 0; i < count; i++) {
+                const z = zPos + (Math.random() - 0.5) * (SEGMENT_LENGTH - 4);
                 const x = (Math.random() - 0.5) * (TRACK_WIDTH - 3);
-                createObstacle(x, z);
+                const types = ['box', 'wall', 'rotator'];
+                const type = types[Math.floor(Math.random() * types.length)];
+                createObstacle(x, z, type, t);
             }
         }
 
-        function createObstacle(x, z) {
-            const types = ['box', 'wall'];
-            const type = types[Math.floor(Math.random() * types.length)];
+        function createObstacle(x, z, type, t) {
             let mesh;
-
             if (type === 'box') {
-                const s = 1 + Math.random() * 0.5; // Smaller boxes
+                const s = 1 + Math.random();
                 mesh = new THREE.Mesh(
                     new THREE.BoxGeometry(s, s, s),
-                    new THREE.MeshPhongMaterial({ color: COLOR_OBSTACLE, emissive: COLOR_OBSTACLE, emissiveIntensity: 0.2 })
+                    new THREE.MeshPhongMaterial({ color: t.obstacle, emissive: t.obstacle, emissiveIntensity: 0.3, shininess: 80 })
                 );
                 mesh.position.set(x, s/2, z);
-            } else {
+            } else if (type === 'wall') {
                 mesh = new THREE.Mesh(
-                    new THREE.BoxGeometry(2.5, 2, 0.6), // Narrower walls
-                    new THREE.MeshPhongMaterial({ color: COLOR_OBSTACLE, emissive: COLOR_OBSTACLE, emissiveIntensity: 0.2 })
+                    new THREE.BoxGeometry(3, 2, 0.6),
+                    new THREE.MeshPhongMaterial({ color: t.obstacle, emissive: t.obstacle, emissiveIntensity: 0.3 })
                 );
                 mesh.position.set(x, 1, z);
+            } else if (type === 'rotator') {
+                mesh = new THREE.Mesh(
+                    new THREE.BoxGeometry(2.5, 0.4, 0.4),
+                    new THREE.MeshPhongMaterial({ color: t.obstacle, emissive: t.obstacle, emissiveIntensity: 0.4 })
+                );
+                mesh.position.set(x, 1.5, z);
+                mesh.userData.isRotator = true;
             }
 
             mesh.castShadow = true;
@@ -1202,7 +856,11 @@
         function updateObstacles() {
             for (let i = obstacles.length - 1; i >= 0; i--) {
                 const obs = obstacles[i];
-                if (obs.position.z > ballPosition.z + 20) {
+                if (obs.userData.isRotator) {
+                    obs.rotation.z += 0.03;
+                    obs.rotation.x += 0.01;
+                }
+                if (obs.position.z > ballPosition.z + 25) {
                     scene.remove(obs); obstacles.splice(i, 1); continue;
                 }
 
@@ -1211,39 +869,71 @@
                 const dy = Math.abs(ball.position.y - obs.position.y);
 
                 if (dx < 1.1 && dz < 1.1 && dy < 1.1) {
-                    createExplosion(ball.position.x, ball.position.y, ball.position.z, COLOR_BALL);
+                    createExplosion(ball.position.x, ball.position.y, ball.position.z, CHARACTERS[currentCharIndex].color, 25);
+                    screenShake = 0.5;
                     gameOver(); return;
                 }
             }
         }
 
-        function spawnPowerup(z) {
+        // ==========================================
+        // COINS & POWERUPS
+        // ==========================================
+        function spawnCoin(z) {
             const x = (Math.random() - 0.5) * (TRACK_WIDTH - 3);
             const mesh = new THREE.Mesh(
-                new THREE.OctahedronGeometry(0.4, 0),
-                new THREE.MeshPhongMaterial({ color: COLOR_POWERUP, emissive: COLOR_POWERUP, emissiveIntensity: 0.5 })
+                new THREE.CylinderGeometry(0.3, 0.3, 0.05, 16),
+                new THREE.MeshPhongMaterial({ color: 0xffd700, emissive: 0xffd700, emissiveIntensity: 0.6, metalness: 0.8 })
+            );
+            mesh.rotation.x = Math.PI / 2;
+            mesh.position.set(x, 1.2, z);
+            mesh.userData.isCoin = true;
+            scene.add(mesh);
+            powerups.push(mesh);
+        }
+
+        function spawnPowerup(z) {
+            const t = THEMES[currentTheme];
+            const x = (Math.random() - 0.5) * (TRACK_WIDTH - 3);
+            const mesh = new THREE.Mesh(
+                new THREE.OctahedronGeometry(0.5, 0),
+                new THREE.MeshPhongMaterial({ color: t.powerup, emissive: t.powerup, emissiveIntensity: 0.6, shininess: 100 })
             );
             mesh.position.set(x, 1.2, z);
+            mesh.userData.isPowerup = true;
             scene.add(mesh);
             powerups.push(mesh);
         }
 
         function updatePowerups() {
+            const t = THEMES[currentTheme];
             for (let i = powerups.length - 1; i >= 0; i--) {
                 const p = powerups[i];
                 p.rotation.y += 0.04;
-                p.position.y = 1.2 + Math.sin(frameCount * 0.03) * 0.2;
+                if (p.userData.isCoin) {
+                    p.rotation.z += 0.08;
+                    p.position.y = 1.2 + Math.sin(frameCount * 0.05) * 0.3;
+                } else {
+                    p.position.y = 1.2 + Math.sin(frameCount * 0.03) * 0.2;
+                }
 
                 const dx = Math.abs(ball.position.x - p.position.x);
                 const dz = Math.abs(ball.position.z - p.position.z);
                 if (dx < 1.3 && dz < 1.3) {
-                    score += 50 + (comboCount * 10);
-                    comboCount++; showCombo();
-                    createExplosion(p.position.x, p.position.y, p.position.z, COLOR_POWERUP);
+                    if (p.userData.isCoin) {
+                        sessionCoins += 10;
+                        coins += 10;
+                        createExplosion(p.position.x, p.position.y, p.position.z, 0xffd700, 10);
+                    } else {
+                        score += 50 + (comboCount * 10);
+                        comboCount++; showCombo();
+                        createExplosion(p.position.x, p.position.y, p.position.z, t.powerup, 15);
+                    }
                     scene.remove(p); powerups.splice(i, 1);
                     updateScoreDisplay(true);
+                    updateStatsUI();
                 }
-                if (p.position.z > ballPosition.z + 20) { scene.remove(p); powerups.splice(i, 1); }
+                if (p.position.z > ballPosition.z + 25) { scene.remove(p); powerups.splice(i, 1); }
             }
         }
 
@@ -1257,15 +947,27 @@
             }
         }
 
-        function createExplosion(x, y, z, color) {
-            for (let i = 0; i < 20; i++) {
+        // ==========================================
+        // VISUAL EFFECTS
+        // ==========================================
+        function createExplosion(x, y, z, color, count = 20) {
+            for (let i = 0; i < count; i++) {
+                const size = 0.06 + Math.random() * 0.12;
                 const p = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.06 + Math.random() * 0.08, 4, 4),
-                    new THREE.MeshBasicMaterial({ color: color })
+                    new THREE.SphereGeometry(size, 6, 6),
+                    new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.9 })
                 );
                 p.position.set(x, y, z);
-                p.userData.vel = { x: (Math.random()-0.5)*0.3, y: Math.random()*0.3, z: (Math.random()-0.5)*0.3 };
-                p.userData.life = 1.0;
+                const speed = 0.2 + Math.random() * 0.3;
+                const angle = Math.random() * Math.PI * 2;
+                const up = Math.random() * 0.4;
+                p.userData.vel = { 
+                    x: Math.cos(angle) * speed, 
+                    y: up + Math.random() * 0.2, 
+                    z: Math.sin(angle) * speed 
+                };
+                p.userData.life = 1.0 + Math.random() * 0.5;
+                p.userData.decay = 0.015 + Math.random() * 0.015;
                 scene.add(p); particles.push(p);
             }
         }
@@ -1273,16 +975,50 @@
         function updateParticles() {
             for (let i = particles.length - 1; i >= 0; i--) {
                 const p = particles[i];
-                p.userData.life -= 0.02;
+                p.userData.life -= p.userData.decay;
                 p.position.x += p.userData.vel.x;
                 p.position.y += p.userData.vel.y;
                 p.position.z += p.userData.vel.z;
-                p.userData.vel.y -= 0.01;
-                p.scale.setScalar(p.userData.life);
+                p.userData.vel.y -= 0.012;
+                p.userData.vel.x *= 0.98;
+                p.userData.vel.z *= 0.98;
+                const s = Math.max(0, p.userData.life);
+                p.scale.setScalar(s);
+                p.material.opacity = s;
                 if (p.userData.life <= 0) { scene.remove(p); particles.splice(i, 1); }
             }
         }
 
+        function updateTrail() {
+            if (!isGameRunning || !ball) return;
+            // Add trail point every few frames
+            if (frameCount % 3 === 0) {
+                const char = CHARACTERS[currentCharIndex];
+                const trail = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.5, 8, 8),
+                    new THREE.MeshBasicMaterial({ color: char.color, transparent: true, opacity: 0.4 })
+                );
+                trail.position.copy(ball.position);
+                trail.position.y -= 0.2;
+                scene.add(trail);
+                ballTrail.push({ mesh: trail, life: 1.0 });
+            }
+            // Update existing trail
+            for (let i = ballTrail.length - 1; i >= 0; i--) {
+                const t = ballTrail[i];
+                t.life -= 0.03;
+                t.mesh.scale.setScalar(t.life * 0.8);
+                t.mesh.material.opacity = t.life * 0.4;
+                if (t.life <= 0) {
+                    scene.remove(t.mesh);
+                    ballTrail.splice(i, 1);
+                }
+            }
+        }
+
+        // ==========================================
+        // INPUT
+        // ==========================================
         function onKeyDown(e) {
             if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
             if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
@@ -1293,37 +1029,131 @@
         }
 
         function setupMobile() {
-            if ('ontouchstart' in window) {
+            if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
                 document.getElementById('mobile-controls').style.display = 'flex';
                 const left = document.getElementById('btn-left');
                 const right = document.getElementById('btn-right');
-                // REVERSED: left arrow moves RIGHT, right arrow moves LEFT
-                left.addEventListener('touchstart', e => { e.preventDefault(); keys.right = true; });
-                left.addEventListener('touchend', e => { e.preventDefault(); keys.right = false; });
-                right.addEventListener('touchstart', e => { e.preventDefault(); keys.left = true; });
-                right.addEventListener('touchend', e => { e.preventDefault(); keys.left = false; });
+
+                const handleTouch = (btn, key, val) => {
+                    btn.addEventListener('touchstart', e => { e.preventDefault(); keys[key] = true; btn.style.transform = 'scale(0.95)'; btn.style.background = 'rgba(0,255,136,0.3)'; btn.style.borderColor = '#00ff88'; });
+                    btn.addEventListener('touchend', e => { e.preventDefault(); keys[key] = false; btn.style.transform = ''; btn.style.background = ''; btn.style.borderColor = ''; });
+                    btn.addEventListener('touchcancel', e => { keys[key] = false; btn.style.transform = ''; btn.style.background = ''; btn.style.borderColor = ''; });
+                };
+                handleTouch(left, 'left');
+                handleTouch(right, 'right');
             }
         }
 
-        function setupDesktop() {
-            // Desktop A/D buttons
-            const btnA = document.getElementById('btn-a');
-            const btnD = document.getElementById('btn-d');
-            if (btnA && btnD) {
-                btnA.addEventListener('mousedown', e => { e.preventDefault(); keys.left = true; });
-                btnA.addEventListener('mouseup', e => { e.preventDefault(); keys.left = false; });
-                btnA.addEventListener('mouseleave', e => { keys.left = false; });
-
-                btnD.addEventListener('mousedown', e => { e.preventDefault(); keys.right = true; });
-                btnD.addEventListener('mouseup', e => { e.preventDefault(); keys.right = false; });
-                btnD.addEventListener('mouseleave', e => { keys.right = false; });
-            }
+        function setupSwipe() {
+            let touchStartX = 0;
+            let touchStartY = 0;
+            document.addEventListener('touchstart', e => {
+                if (e.target.closest('.mobile-btn') || e.target.closest('.char-card') || e.target.closest('.theme-btn') || e.target.closest('.shop-item') || e.target.closest('.btn-play') || e.target.closest('.btn-close-shop')) return;
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+            }, { passive: false });
+            document.addEventListener('touchmove', e => {
+                if (!touchStartX) return;
+                const dx = e.touches[0].clientX - touchStartX;
+                const dy = e.touches[0].clientY - touchStartY;
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    e.preventDefault();
+                    keys.left = dx < -20;
+                    keys.right = dx > 20;
+                }
+            }, { passive: false });
+            document.addEventListener('touchend', e => {
+                keys.left = false; keys.right = false;
+                touchStartX = 0; touchStartY = 0;
+            });
         }
 
         function onResize() {
+            if (!camera || !renderer) return;
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // ==========================================
+        // GAME LOOP
+        // ==========================================
+        function updateBall() {
+            if (!isGameRunning) return;
+            const accel = 0.025;
+            if (keys.left) ballVelocity.x -= accel;
+            if (keys.right) ballVelocity.x += accel;
+            ballVelocity.x *= 0.94;
+            ballVelocity.x = Math.max(-0.5, Math.min(0.5, ballVelocity.x));
+
+            ballPosition.x += ballVelocity.x;
+            ballPosition.z -= speed;
+            totalDistance += speed;
+
+            ball.rotation.x -= speed * 0.5;
+            ball.rotation.z = -ballVelocity.x * 2;
+
+            ball.position.x = ballPosition.x;
+            ball.position.z = ballPosition.z;
+
+            // Glow pulse
+            if (ballGlow) {
+                const pulse = 1 + Math.sin(frameCount * 0.05) * 0.1;
+                ballGlow[0].scale.setScalar(pulse);
+                ballGlow[1].scale.setScalar(pulse * 1.2);
+            }
+
+            // Wall bounce
+            if (ballPosition.x < -TRACK_HALF + 0.8) {
+                ballPosition.x = -TRACK_HALF + 0.8;
+                ballVelocity.x = Math.abs(ballVelocity.x) * 0.3;
+            }
+            if (ballPosition.x > TRACK_HALF - 0.8) {
+                ballPosition.x = TRACK_HALF - 0.8;
+                ballVelocity.x = -Math.abs(ballVelocity.x) * 0.3;
+            }
+
+            // Camera with screen shake
+            let shakeX = 0, shakeY = 0;
+            if (screenShake > 0) {
+                shakeX = (Math.random() - 0.5) * screenShake;
+                shakeY = (Math.random() - 0.5) * screenShake;
+                screenShake *= 0.9;
+                if (screenShake < 0.01) screenShake = 0;
+            }
+
+            const tx = ballPosition.x * 0.3 + shakeX;
+            const tz = ballPosition.z + 12 + shakeY;
+            const ty = 8 + Math.abs(ballVelocity.x) * 2 + shakeY;
+            camera.position.x += (tx - camera.position.x) * 0.08;
+            camera.position.z += (tz - camera.position.z) * 0.08;
+            camera.position.y += (ty - camera.position.y) * 0.08;
+            camera.lookAt(new THREE.Vector3(ballPosition.x * 0.1, 0, ballPosition.z - 12));
+
+            // Fall off
+            if (Math.abs(ballPosition.x) > TRACK_HALF + 0.5) {
+                ball.position.y -= 0.3;
+                if (ball.position.y < -5) gameOver();
+            } else {
+                ball.position.y = 1.2 + Math.sin(frameCount * 0.1) * 0.05;
+            }
+        }
+
+        function updateTrack() {
+            if (!isGameRunning) return;
+            const aheadZ = ballPosition.z - (SEGMENTS_VISIBLE * SEGMENT_LENGTH);
+            const lastZ = trackSegments.length > 0 ? trackSegments[trackSegments.length - 1].z : 0;
+            if (lastZ > aheadZ) spawnTrackSegment(lastZ - SEGMENT_LENGTH);
+            removeOldSegments();
+        }
+
+        function updateScore() {
+            if (!isGameRunning) return;
+            score = Math.floor(totalDistance * 2);
+            speed = baseSpeed + (totalDistance / 400) * 0.4;
+            if (speed > 2.2) speed = 2.2;
+            if (speed > maxSpeedReached) maxSpeedReached = speed;
+            updateScoreDisplay();
         }
 
         function updateScoreDisplay(isPop = false) {
@@ -1339,74 +1169,11 @@
             document.getElementById('progress-bar').style.width = ((totalDistance % 100) / 100 * 100) + '%';
         }
 
-        function updateBall() {
-            if (!isGameRunning) return;
-
-            const accel = 0.02;
-            if (keys.left) ballVelocity.x -= accel;
-            if (keys.right) ballVelocity.x += accel;
-            ballVelocity.x *= 0.95;
-            ballVelocity.x = Math.max(-0.4, Math.min(0.4, ballVelocity.x));
-
-            ballPosition.x += ballVelocity.x;
-            ballPosition.z -= speed;
-            totalDistance += speed;
-
-            ball.rotation.x -= speed * 0.5;
-            ball.rotation.z = -ballVelocity.x * 1.5;
-
-            ball.position.x = ballPosition.x;
-            ball.position.z = ballPosition.z;
-
-            if (ballPosition.x < -TRACK_HALF + 0.8) {
-                ballPosition.x = -TRACK_HALF + 0.8;
-                ballVelocity.x = Math.abs(ballVelocity.x) * 0.2;
-            }
-            if (ballPosition.x > TRACK_HALF - 0.8) {
-                ballPosition.x = TRACK_HALF - 0.8;
-                ballVelocity.x = -Math.abs(ballVelocity.x) * 0.2;
-            }
-
-            const tx = ballPosition.x * 0.3;
-            const tz = ballPosition.z + 12;
-            const ty = 8 + Math.abs(ballVelocity.x) * 2;
-            camera.position.x += (tx - camera.position.x) * 0.06;
-            camera.position.z += (tz - camera.position.z) * 0.06;
-            camera.position.y += (ty - camera.position.y) * 0.06;
-            camera.lookAt(new THREE.Vector3(ballPosition.x * 0.1, 0, ballPosition.z - 12));
-
-            if (Math.abs(ballPosition.x) > TRACK_HALF + 0.5) {
-                ball.position.y -= 0.25;
-                if (ball.position.y < -4) gameOver();
-            } else {
-                ball.position.y = 1.2;
-            }
-        }
-
-        function updateTrack() {
-            if (!isGameRunning) return;
-            const aheadZ = ballPosition.z - (SEGMENTS_VISIBLE * SEGMENT_LENGTH);
-            const lastZ = trackSegments.length > 0 ? trackSegments[trackSegments.length - 1].z : 0;
-            if (lastZ > aheadZ) spawnTrackSegment(lastZ - SEGMENT_LENGTH);
-            removeOldSegments();
-        }
-
-        function updateScore() {
-            if (!isGameRunning) return;
-            score = Math.floor(totalDistance * 2);
-
-            // Update difficulty based on distance
-            updateDifficulty();
-
-            if (speed > maxSpeedReached) maxSpeedReached = speed;
-            updateScoreDisplay();
-        }
-
         function animate() {
             requestAnimationFrame(animate);
             frameCount++;
             if (isGameRunning) {
-                updateBall(); updateTrack(); updateObstacles(); updatePowerups(); updateParticles(); updateScore();
+                updateBall(); updateTrack(); updateObstacles(); updatePowerups(); updateParticles(); updateTrail(); updateScore();
             }
             renderer.render(scene, camera);
         }
@@ -1417,19 +1184,18 @@
         function showMainScreen() {
             document.getElementById('main-screen').classList.remove('hidden');
         }
-
         function hideMainScreen() {
             document.getElementById('main-screen').classList.add('hidden');
         }
 
         function showGameOverStats() {
-            document.getElementById('main-title').style.display = 'none';
-            document.getElementById('main-subtitle').style.display = 'none';
+            document.querySelector('.game-title').style.display = 'none';
+            document.querySelector('.game-subtitle').style.display = 'none';
             document.getElementById('controls-info').style.display = 'none';
-
-            // Hide characters during game over
-            const charSection = document.querySelector('.characters-section');
-            if (charSection) charSection.style.display = 'none';
+            document.getElementById('cover-wrapper').style.display = 'none';
+            document.getElementById('characters-panel').style.display = 'none';
+            document.getElementById('shop-btn').style.display = 'none';
+            document.getElementById('theme-selector').style.display = 'none';
 
             document.getElementById('game-over-stats').classList.add('show');
             document.getElementById('play-btn').textContent = '↻ حاول مرة أخرى';
@@ -1438,6 +1204,7 @@
             document.getElementById('final-high').textContent = highScore;
             document.getElementById('final-dist').textContent = Math.floor(totalDistance) + ' م';
             document.getElementById('final-speed').textContent = maxSpeedReached.toFixed(1) + 'x';
+            document.getElementById('final-coins').textContent = '+' + sessionCoins;
 
             if (score >= highScore && score > 0) {
                 document.getElementById('new-record').classList.add('show');
@@ -1447,13 +1214,13 @@
         }
 
         function showStartScreen() {
-            document.getElementById('main-title').style.display = 'block';
-            document.getElementById('main-subtitle').style.display = 'block';
+            document.querySelector('.game-title').style.display = 'block';
+            document.querySelector('.game-subtitle').style.display = 'block';
             document.getElementById('controls-info').style.display = 'block';
-
-            // Show characters on start screen
-            const charSection = document.querySelector('.characters-section');
-            if (charSection) charSection.style.display = 'block';
+            document.getElementById('cover-wrapper').style.display = 'block';
+            document.getElementById('characters-panel').style.display = 'flex';
+            document.getElementById('shop-btn').style.display = 'flex';
+            document.getElementById('theme-selector').style.display = 'flex';
 
             document.getElementById('game-over-stats').classList.remove('show');
             document.getElementById('play-btn').textContent = '▶ العب الآن';
@@ -1468,7 +1235,6 @@
                 isGameOver = false;
                 showStartScreen();
             }
-
             hideMainScreen();
             isGameRunning = true;
             resetGame();
@@ -1476,20 +1242,22 @@
 
         function resetGame() {
             score = 0; totalDistance = 0; speed = baseSpeed; frameCount = 0;
-            maxSpeedReached = baseSpeed; comboCount = 0;
-
-            // Reset difficulty
-            currentObstacleCount = 1;
-            currentObstacleSpacing = 35;
-            currentSpeedMultiplier = 1.0;
-
+            maxSpeedReached = baseSpeed; comboCount = 0; sessionCoins = 0;
+            screenShake = 0;
             ballPosition = { x: 0, z: 0 }; ballVelocity = { x: 0 };
-            ball.position.set(0, 1.2, 0); ball.rotation.set(0, 0, 0);
+
+            if (ball) {
+                ball.position.set(0, 1.2, 0); ball.rotation.set(0, 0, 0);
+            }
 
             trackSegments.forEach(s => scene.remove(s.mesh)); trackSegments = [];
             obstacles.forEach(o => scene.remove(o)); obstacles = [];
             powerups.forEach(p => scene.remove(p)); powerups = [];
             particles.forEach(p => scene.remove(p)); particles = [];
+            ballTrail.forEach(t => scene.remove(t.mesh)); ballTrail = [];
+
+            applyTheme();
+            createBall();
 
             for (let i = 0; i < SEGMENTS_VISIBLE; i++) {
                 spawnTrackSegment(-i * SEGMENT_LENGTH);
@@ -1497,6 +1265,7 @@
 
             camera.position.set(0, 8, 12); camera.lookAt(0, 0, -10);
             updateScoreDisplay();
+            updateStatsUI();
         }
 
         function gameOver() {
@@ -1508,21 +1277,15 @@
                 highScore = score;
                 localStorage.setItem('muneerHighScore', highScore);
             }
+            saveData();
 
             showMainScreen();
             showGameOverStats();
             document.getElementById('high-stat').textContent = highScore;
         }
 
-        document.addEventListener('contextmenu', e => e.preventDefault());
-
+        // Start
         init();
     </script>
-    <!-- Character Notification -->
-    <div id="char-notification">
-        <div class="char-msg">أنت الآن تلعب بشخصية</div>
-        <div class="char-name" id="char-name-display">---</div>
-    </div>
-
 </body>
 </html>
