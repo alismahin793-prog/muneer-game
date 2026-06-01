@@ -427,6 +427,17 @@
             <kbd>←</kbd> <kbd>→</kbd> أو <kbd>A</kbd> <kbd>D</kbd> للتحكم<br>
             تجنب العقبات الحمراء! اجمع الماسات الزرقاء!
         </div>
+
+        <!-- Share Link Section -->
+        <div id="share-section" style="margin-top:15px; display:flex; flex-direction:column; align-items:center; gap:8px; width:90%; max-width:400px;">
+            <div style="font-size:12px; color:#888; font-weight:700;">🔗 رابط اللعبة (انسخه وشاركه)</div>
+            <div style="display:flex; width:100%; gap:8px;">
+                <input id="share-link" type="text" readonly value="https://muneer-game.github.io/zalm" 
+                    style="flex:1; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.2); border-radius:10px; padding:10px 14px; color:#00d4ff; font-size:13px; font-family:monospace; text-align:center; outline:none;">
+                <button onclick="copyGameLink()" style="background:linear-gradient(135deg,#00ff88,#00d4ff); border:none; border-radius:10px; padding:10px 18px; font-weight:900; color:#000; cursor:pointer; font-size:13px; font-family:'Tajawal',sans-serif; transition:all 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform=''">📋 نسخ</button>
+            </div>
+            <div style="font-size:10px; color:#666;">يمكنك رفع الملف على GitHub Pages أو Netlify لتفعيل الرابط</div>
+        </div>
     </div>
 
     <!-- SHOP SCREEN -->
@@ -1196,6 +1207,7 @@
             document.getElementById('characters-panel').style.display = 'none';
             document.getElementById('shop-btn').style.display = 'none';
             document.getElementById('theme-selector').style.display = 'none';
+            document.getElementById('share-section').style.display = 'none';
 
             document.getElementById('game-over-stats').classList.add('show');
             document.getElementById('play-btn').textContent = '↻ حاول مرة أخرى';
@@ -1221,10 +1233,16 @@
             document.getElementById('characters-panel').style.display = 'flex';
             document.getElementById('shop-btn').style.display = 'flex';
             document.getElementById('theme-selector').style.display = 'flex';
+            document.getElementById('share-section').style.display = 'flex';
 
             document.getElementById('game-over-stats').classList.remove('show');
             document.getElementById('play-btn').textContent = '▶ العب الآن';
             document.getElementById('new-record').classList.remove('show');
+
+            // Restore button onclick to startGame
+            document.getElementById('play-btn').onclick = startGame;
+            document.getElementById('play-btn').disabled = false;
+            document.getElementById('play-btn').style.opacity = '1';
         }
 
         // ==========================================
@@ -1282,6 +1300,49 @@
             showMainScreen();
             showGameOverStats();
             document.getElementById('high-stat').textContent = highScore;
+
+            // Auto-return to main menu after 4 seconds
+            let countdown = 4;
+            const btn = document.getElementById('play-btn');
+            const originalText = btn.textContent;
+            btn.textContent = '↻ العودة للقائمة (' + countdown + ')';
+            btn.disabled = true;
+            btn.style.opacity = '0.6';
+
+            const autoReturnTimer = setInterval(() => {
+                countdown--;
+                if (countdown > 0) {
+                    btn.textContent = '↻ العودة للقائمة (' + countdown + ')';
+                } else {
+                    clearInterval(autoReturnTimer);
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                    showStartScreen();
+                }
+            }, 1000);
+
+            // Allow manual click to return immediately
+            btn.onclick = () => {
+                clearInterval(autoReturnTimer);
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.onclick = startGame;
+                showStartScreen();
+            };
+        }
+
+        function copyGameLink() {
+            const input = document.getElementById('share-link');
+            input.select();
+            input.setSelectionRange(0, 99999);
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(input.value).then(() => {
+                    alert('✅ تم نسخ رابط اللعبة! شاركه مع الزلم');
+                });
+            } else {
+                document.execCommand('copy');
+                alert('✅ تم نسخ رابط اللعبة! شاركه مع الزلم');
+            }
         }
 
         // Start
