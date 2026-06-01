@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>منير قيم - Muneer Game</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; overflow: hidden; }
@@ -11,6 +14,16 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             touch-action: none;
             user-select: none;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+        html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
         }
         #game-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; }
         canvas { display: block; }
@@ -51,10 +64,11 @@
         #progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #00ff88, #00d4ff); transition: width 0.3s; }
 
         .screen {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             pointer-events: all; z-index: 20;
             background: #0a0a1a;
+            overflow: hidden;
         }
 
         #cover-wrapper {
@@ -723,10 +737,10 @@
         <button class="btn-play" id="play-btn" onclick="startGame()">▶ العب الآن</button>
 
         
-        <!-- Characters Selection -->
+        <!-- Characters Selection - TOP & BOTTOM ROWS -->
         <div class="characters-section">
-            <div class="characters-title">المصمم منير (علي) | اختر شخصيتك</div>
-            <div class="characters-grid">
+            <!-- TOP ROW Characters -->
+            <div class="characters-grid characters-grid-top">
                 <div class="character-btn char-aqout" onclick="selectCharacter('aqout', 'عقوت', 'بشار', '#ff6b6b')">
                     <span class="char-nickname">عقوت</span>
                     <span class="char-sep">⚡</span>
@@ -752,6 +766,9 @@
                     <span class="char-sep">⚡</span>
                     <span class="char-real">عربي</span>
                 </div>
+            </div>
+            <!-- BOTTOM ROW Characters -->
+            <div class="characters-grid characters-grid-bottom">
                 <div class="character-btn char-sheikh" onclick="selectCharacter('sheikh', 'شيخ الشباب', 'عيسى', '#ff8844')">
                     <span class="char-nickname">شيخ الشباب</span>
                     <span class="char-sep">⚡</span>
@@ -1399,6 +1416,10 @@
             document.getElementById('main-subtitle').style.display = 'none';
             document.getElementById('controls-info').style.display = 'none';
 
+            // Hide characters during game over
+            const charSection = document.querySelector('.characters-section');
+            if (charSection) charSection.style.display = 'none';
+
             document.getElementById('game-over-stats').classList.add('show');
             document.getElementById('play-btn').textContent = '↻ حاول مرة أخرى';
 
@@ -1418,6 +1439,10 @@
             document.getElementById('main-title').style.display = 'block';
             document.getElementById('main-subtitle').style.display = 'block';
             document.getElementById('controls-info').style.display = 'block';
+
+            // Show characters on start screen
+            const charSection = document.querySelector('.characters-section');
+            if (charSection) charSection.style.display = 'block';
 
             document.getElementById('game-over-stats').classList.remove('show');
             document.getElementById('play-btn').textContent = '▶ العب الآن';
