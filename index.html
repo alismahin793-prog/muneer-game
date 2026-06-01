@@ -365,6 +365,7 @@
             </div>
         </div>
         <div id="combo-display">🔥 x2</div>
+        <div id="coin-bonus" style="position:absolute; top:50px; left:50%; transform:translateX(-50%); font-size:18px; font-weight:900; color:#ffd700; text-shadow:0 0 15px rgba(255,215,0,0.8); opacity:0; transition:all 0.4s; pointer-events:none; z-index:15; background:rgba(0,0,0,0.5); backdrop-filter:blur(5px); border:1px solid rgba(255,215,0,0.3); border-radius:50px; padding:8px 20px; white-space:nowrap;">🪙 +10 عملات</div>
         <div id="progress-container"><div id="progress-bar"></div></div>
         <div id="mobile-controls">
             <div class="mobile-btn" id="btn-left">◀</div>
@@ -455,7 +456,8 @@
         // ==========================================
         const CHARACTERS = [
             { id: 'muneer', name: 'منير', color: 0xBF00FF, emissive: 0x8000CC, price: 0, glow: '#BF00FF' },
-            { id: 'bashar', name: 'بشار', color: 0x4169E1, emissive: 0x2040A0, price: 0, glow: '#4169E1' },
+            { id: 'bashar', name: 'بشار', color: 0x4169E1, emissive: 0x2040A0, price: 200, glow: '#4169E1' },
+            { id: 'ahmed', name: 'أحمد', color: 0xFF3333, emissive: 0xCC0000, price: 250, glow: '#FF3333' },
             { id: 'omar', name: 'عمر', color: 0xFF4500, emissive: 0xCC3300, price: 300, glow: '#FF4500' },
             { id: 'arabi', name: 'عربي', color: 0x50C878, emissive: 0x30A050, price: 300, glow: '#50C878' },
             { id: 'safwan', name: 'صفوان', color: 0xFFD700, emissive: 0xCCAA00, price: 500, glow: '#FFD700' },
@@ -478,7 +480,7 @@
         let currentTheme = 0;
         let currentCharIndex = 0;
         let coins = parseInt(localStorage.getItem('muneerCoins')) || 1000;
-        let ownedChars = JSON.parse(localStorage.getItem('muneerOwnedChars')) || ['muneer', 'bashar'];
+        let ownedChars = JSON.parse(localStorage.getItem('muneerOwnedChars')) || ['muneer'];
 
         // ==========================================
         // THREE.JS CORE
@@ -494,6 +496,7 @@
         let frameCount = 0, totalDistance = 0, sessionCoins = 0;
         let scorePopTimeout = null, comboCount = 0, comboTimer = null;
         let screenShake = 0;
+        let lastScoreMilestone = 0;
         const SAFETY_ZONE_LENGTH = 100;
         const TRACK_WIDTH = 12, SEGMENT_LENGTH = 20, SEGMENTS_VISIBLE = 12, TRACK_HALF = TRACK_WIDTH / 2;
 
@@ -526,7 +529,7 @@
             const saved = localStorage.getItem('muneerOwnedChars');
             if (saved) ownedChars = JSON.parse(saved);
             else {
-                ownedChars = ['muneer', 'bashar'];
+                ownedChars = ['muneer'];
                 localStorage.setItem('muneerOwnedChars', JSON.stringify(ownedChars));
             }
             coins = parseInt(localStorage.getItem('muneerCoins')) || 1000;
@@ -962,6 +965,17 @@
         // ==========================================
         // VISUAL EFFECTS
         // ==========================================
+        function showCoinBonus(amount) {
+            const el = document.getElementById('coin-bonus');
+            el.textContent = '🪙 +' + amount + ' عملات!';
+            el.style.opacity = '1';
+            el.style.transform = 'translateX(-50%) scale(1.1)';
+            setTimeout(() => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateX(-50%) scale(1)';
+            }, 1500);
+        }
+
         function createExplosion(x, y, z, color, count = 20) {
             for (let i = 0; i < count; i++) {
                 const size = 0.06 + Math.random() * 0.12;
@@ -1161,7 +1175,21 @@
 
         function updateScore() {
             if (!isGameRunning) return;
-            score = Math.floor(totalDistance * 2);
+            score = Math.floor(totalDistance * 1);
+
+            // Award 10 coins every 100 points
+            const currentMilestone = Math.floor(score / 100);
+            if (currentMilestone > lastScoreMilestone) {
+                const milestonesPassed = currentMilestone - lastScoreMilestone;
+                const bonusCoins = milestonesPassed * 10;
+                coins += bonusCoins;
+                sessionCoins += bonusCoins;
+                lastScoreMilestone = currentMilestone;
+                showCoinBonus(bonusCoins);
+                updateStatsUI();
+                createExplosion(ball.position.x, ball.position.y + 1, ball.position.z, 0xffd700, 12);
+            }
+
             speed = baseSpeed + (totalDistance / 400) * 0.4;
             if (speed > 2.2) speed = 2.2;
             if (speed > maxSpeedReached) maxSpeedReached = speed;
@@ -1262,7 +1290,7 @@
         function resetGame() {
             score = 0; totalDistance = 0; speed = baseSpeed; frameCount = 0;
             maxSpeedReached = baseSpeed; comboCount = 0; sessionCoins = 0;
-            screenShake = 0;
+            screenShake = 0; lastScoreMilestone = 0;
             ballPosition = { x: 0, z: 0 }; ballVelocity = { x: 0 };
 
             if (ball) {
